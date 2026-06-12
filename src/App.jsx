@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import RadarMap from './components/RadarMap';
 import FlightDetails from './components/FlightDetails';
+import FlightFinder from './components/FlightFinder';
+import LostAndFound from './components/LostAndFound';
 import { fetchActiveFlights } from './services/api';
 
 function App() {
@@ -8,6 +10,7 @@ function App() {
   const [selectedFlight, setSelectedFlight] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isLostAndFoundOpen, setIsLostAndFoundOpen] = useState(false);
 
   const loadFlights = async () => {
     try {
@@ -22,7 +25,7 @@ function App() {
           setSelectedFlight(updatedSelected);
         }
       }
-    } catch (err) {
+    } catch {
       setError('Failed to fetch flight data. Please check your API key.');
     } finally {
       setIsLoading(false);
@@ -30,10 +33,13 @@ function App() {
   };
 
   useEffect(() => {
-    loadFlights();
+    const initialLoad = setTimeout(loadFlights, 0);
     // Refresh every 60 seconds
     const interval = setInterval(loadFlights, 60000);
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(initialLoad);
+      clearInterval(interval);
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
@@ -65,36 +71,45 @@ function App() {
       />
       
       <FlightDetails 
+        key={selectedFlight?.icao24 || 'no-flight'}
         flight={selectedFlight} 
         onClose={() => setSelectedFlight(null)} 
       />
 
-      {/* Header / Logo overlay */}
+      <FlightFinder flights={flights} onFlightSelect={setSelectedFlight} />
+
       <div 
-        className="glass-panel"
-        style={{
-          position: 'absolute',
-          top: '20px',
-          left: '60px', /* Avoid zooming controls */
-          padding: '12px 24px',
-          zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px'
-        }}
+        className="glass-panel brand-panel"
       >
-        <div style={{
-          width: '12px', height: '12px', borderRadius: '50%', 
-          background: error ? 'var(--danger-color)' : 'var(--success-color)',
-          boxShadow: `0 0 10px ${error ? 'var(--danger-color)' : 'var(--success-color)'}`
-        }}></div>
-        <h1 style={{ fontSize: '1.2rem', fontWeight: '700', letterSpacing: '1px', margin: 0 }}>
-          RADAR<span style={{ color: 'var(--accent-hover)' }}>24</span>
-        </h1>
-        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginLeft: '8px' }}>
-          {flights.length} Active Flights
-        </span>
+        <div className={`status-dot ${error ? 'is-error' : ''}`} />
+        <div>
+          <h1>SEAMLESS <span>SKIES</span></h1>
+          <p>Powered by Precision</p>
+        </div>
+        <span className="flight-count">{flights.length} Tracked Flights</span>
       </div>
+
+      <div className="glass-panel map-legend">
+        <span><i className="legend-dot ground" /> Ground · Bookable</span>
+        <span><i className="legend-dot air" /> In air · Unavailable</span>
+      </div>
+
+      <button
+        className="glass-panel lost-found-trigger"
+        type="button"
+        onClick={() => setIsLostAndFoundOpen(true)}
+      >
+        <span className="trigger-icon" aria-hidden="true">?</span>
+        <span>
+          <strong>Lost &amp; Found</strong>
+          <small>Report or track an item</small>
+        </span>
+      </button>
+
+      <LostAndFound
+        isOpen={isLostAndFoundOpen}
+        onClose={() => setIsLostAndFoundOpen(false)}
+      />
     </div>
   );
 }
