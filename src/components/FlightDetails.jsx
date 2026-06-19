@@ -11,12 +11,37 @@ const FlightDetails = ({ flight, onClose }) => {
   const [passengers, setPassengers] = useState(1);
   const [travelClass, setTravelClass] = useState('Economy');
   const [passengerName, setPassengerName] = useState('');
+  const [nameError, setNameError] = useState('');
   const [bookingId, setBookingId] = useState('');
+  const [meals, setMeals] = useState(['None']);
+
+  const handlePassengersChange = (count) => {
+    setPassengers(count);
+    setMeals((prev) => {
+      const next = [...prev];
+      if (next.length < count) {
+        while (next.length < count) {
+          next.push('None');
+        }
+      } else if (next.length > count) {
+        next.length = count;
+      }
+      return next;
+    });
+  };
+
+  const mealCost = useMemo(() => {
+    return meals.reduce((sum, meal) => {
+      if (meal === 'Veg') return sum + 250;
+      if (meal === 'Non-Veg') return sum + 350;
+      return sum;
+    }, 0);
+  }, [meals]);
 
   const multiplier = travelClass === 'Business' ? 1.8 : 1;
   const total = useMemo(
-    () => Math.round((flight?.priceInr || 0) * passengers * multiplier),
-    [flight?.priceInr, passengers, multiplier]
+    () => Math.round((flight?.priceInr || 0) * passengers * multiplier + mealCost),
+    [flight?.priceInr, passengers, multiplier, mealCost]
   );
 
   if (!flight) return null;
@@ -39,6 +64,11 @@ const FlightDetails = ({ flight, onClose }) => {
 
   const submitBooking = (event) => {
     event.preventDefault();
+    if (!passengerName || passengerName.trim().length < 2) {
+      setNameError('Please enter the passenger\'s full name (at least 2 characters).');
+      return;
+    }
+    setNameError('');
     setBookingId(`SS${Math.floor(100000 + Math.random() * 900000)}`);
   };
 
@@ -52,7 +82,7 @@ const FlightDetails = ({ flight, onClose }) => {
           <h2>{callsign !== 'UNKNOWN' ? callsign : 'Unknown Callsign'}</h2>
           <div className="aircraft-id">ICAO24: {icao24.toUpperCase()}</div>
         </div>
-        <button className="close-btn" onClick={onClose} aria-label="Close flight details">&times;</button>
+        <button className="close-btn" type="button" onClick={onClose} aria-label="Close flight details">&times;</button>
       </div>
 
       {route && (
@@ -144,29 +174,73 @@ const FlightDetails = ({ flight, onClose }) => {
               <span>Booking confirmed</span>
               <strong>{bookingId}</strong>
               <p>{passengerName}, your {travelClass.toLowerCase()} ticket is reserved.</p>
+              <div className="confirmation-details">
+                <div>Passengers: {passengers}</div>
+                <div style={{ marginTop: '4px' }}>Meals summary:</div>
+                <ul className="meals-summary-list">
+                  {meals.map((meal, index) => (
+                    <li key={index}>
+                      Passenger {index + 1}: {meal === 'None' ? 'No Meal' : meal === 'Veg' ? 'Vegetarian' : 'Non-Vegetarian'}
+                    </li>
+                  ))}
+                </ul>
+                <div className="confirmation-total" style={{ marginTop: '8px', borderTop: '1px solid rgba(16, 185, 129, 0.2)', paddingTop: '6px', fontWeight: 'bold' }}>
+                  Total: {formatInr(total)}
+                </div>
+              </div>
             </div>
           ) : (
             <>
               <h3>Book {route.fromCode} to {route.toCode}</h3>
-              <label>
-                Lead passenger
-                <input value={passengerName} onChange={(event) => setPassengerName(event.target.value)} required placeholder="Full name" />
-              </label>
+              <label htmlFor="booking-name">Lead passenger</label>
+              <input
+                id="booking-name"
+                value={passengerName}
+                onChange={(event) => { setPassengerName(event.target.value); if (nameError) setNameError(''); }}
+                placeholder="Full name"
+                aria-invalid={!!nameError}
+                aria-describedby={nameError ? 'booking-name-error' : undefined}
+              />
+              {nameError && (
+                <span id="booking-name-error" className="field-error" role="alert">{nameError}</span>
+              )}
               <div className="booking-fields">
-                <label>
+                <label htmlFor="booking-passengers">
                   Passengers
-                  <select value={passengers} onChange={(event) => setPassengers(Number(event.target.value))}>
+                  <select id="booking-passengers" value={passengers} onChange={(event) => handlePassengersChange(Number(event.target.value))}>
                     {[1, 2, 3, 4, 5].map((count) => <option value={count} key={count}>{count}</option>)}
                   </select>
                 </label>
-                <label>
+                <label htmlFor="booking-class">
                   Class
-                  <select value={travelClass} onChange={(event) => setTravelClass(event.target.value)}>
+                  <select id="booking-class" value={travelClass} onChange={(event) => setTravelClass(event.target.value)}>
                     <option>Economy</option>
                     <option>Business</option>
                   </select>
                 </label>
               </div>
+
+              <div className="meal-selection-section">
+                <h4>Meal Selection</h4>
+                {meals.map((meal, index) => (
+                  <div key={index} className="passenger-meal-row">
+                    <span>Passenger {index + 1} {index === 0 && '(Lead)'}</span>
+                    <select
+                      value={meal}
+                      onChange={(event) => {
+                        const newMeals = [...meals];
+                        newMeals[index] = event.target.value;
+                        setMeals(newMeals);
+                      }}
+                    >
+                      <option value="None">No Meal (₹0)</option>
+                      <option value="Veg">Veg Meal (+₹250)</option>
+                      <option value="Non-Veg">Non-Veg Meal (+₹350)</option>
+                    </select>
+                  </div>
+                ))}
+              </div>
+
               <div className="booking-total">
                 <span>Total</span>
                 <strong>{formatInr(total)}</strong>

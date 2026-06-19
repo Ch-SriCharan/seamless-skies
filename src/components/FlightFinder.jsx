@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 
 const formatInr = (amount) => new Intl.NumberFormat('en-IN', {
   style: 'currency',
@@ -45,10 +45,10 @@ const FlightFinder = ({ flights, onFlightSelect }) => {
         <button type="button" onClick={() => setIsOpen(false)} aria-label="Close flight finder">&times;</button>
       </header>
 
-      <div className="route-filters">
-        <label>
+      <div className="route-filters" role="group" aria-label="Filter flights by route">
+        <label htmlFor="ff-from">
           From
-          <select value={from} onChange={(event) => setFrom(event.target.value)}>
+          <select id="ff-from" value={from} onChange={(event) => setFrom(event.target.value)}>
             <option value="">Any origin</option>
             {origins.map((city) => <option value={city} key={city}>{city}</option>)}
           </select>
@@ -61,9 +61,9 @@ const FlightFinder = ({ flights, onFlightSelect }) => {
         >
           ⇄
         </button>
-        <label>
+        <label htmlFor="ff-to">
           To
-          <select value={to} onChange={(event) => setTo(event.target.value)}>
+          <select id="ff-to" value={to} onChange={(event) => setTo(event.target.value)}>
             <option value="">Any destination</option>
             {destinations.map((city) => <option value={city} key={city}>{city}</option>)}
           </select>
@@ -75,7 +75,7 @@ const FlightFinder = ({ flights, onFlightSelect }) => {
         {(from || to) && <button type="button" onClick={() => { setFrom(''); setTo(''); }}>Clear</button>}
       </div>
 
-      <div className="flight-results">
+      <div className="flight-results" role="list" aria-label="Available flights">
         {matches.map((flight) => (
           <article className="flight-result" key={flight.icao24}>
             <div className="result-topline">
@@ -105,4 +105,4 @@ const FlightFinder = ({ flights, onFlightSelect }) => {
   );
 };
 
-export default FlightFinder;
+export default memo(FlightFinder);

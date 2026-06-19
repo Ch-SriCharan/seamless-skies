@@ -54,7 +54,7 @@ const RadarMap = ({ flights, onFlightSelect, selectedFlight }) => {
   const defaultCenter = [22.8, 79.0];
 
   return (
-    <div style={{ flex: 1, position: 'relative' }}>
+    <div style={{ flex: 1, position: 'relative' }} aria-label="Interactive flight radar map" role="region">
       <MapContainer 
         center={defaultCenter} 
         zoom={5}
